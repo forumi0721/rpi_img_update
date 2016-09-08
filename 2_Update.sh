@@ -170,11 +170,24 @@ echo "skel"
 cp -ar mountpoint/etc/skel/. mountpoint/root/
 echo
 
+#mirror
+echo "mirror"
+sed -i 's@http://mirrordirector.raspbian.org/raspbian/@http://ftp.kaist.ac.kr/raspbian/raspbian/@g' mountpoint/etc/apt/sources.list
+#sed -i 's@http://archive.raspbian.org/debian/@http://ftp.kaist.ac.kr/raspbian/raspbian/@g' mountpoint/etc/apt/sources.list.d/raspi.list
+echo
+
 #update
 echo "Update"
+tt=$(mktemp -d)
+mount -o bind ${tt} mountpoint/var/cache/apt/archives
 cmd "apt-get update -o Acquire::CompressionTypes::Order::=gz"
 cmd "apt-get dist-upgrade -y"
 cmd "apt-get autoremove --purge -y"
+cmd "apt-get autoclean -y"
+cmd "apt-get clean"
+cmd "find /var/lib/apt -type f -exec rm \"{}\" \\;"
+umount mountpoint/var/cache/apt/archives
+rm -rf ${tt}
 cmd "apt-get autoclean -y"
 cmd "apt-get clean"
 cmd "find /var/lib/apt -type f -exec rm \"{}\" \\;"
