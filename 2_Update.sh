@@ -57,6 +57,7 @@ fi
 mkdir -p mountpoint
 
 offset=$(fdisk ${SELECT_IMAGE} -l | grep Linux$ | sed 's/\s\+/ /g' | cut -f 2 -d ' ')
+offset_boot=$(fdisk ${SELECT_IMAGE} -l | grep "W95 FAT32" | sed 's/\s\+/ /g' | cut -f 2 -d ' ')
 
 if [ -z "${offset}" ]; then
 	echo "Invalid offset"
@@ -64,9 +65,35 @@ if [ -z "${offset}" ]; then
 fi
 
 mount -o loop,offset=$((offset * 512)) ${SELECT_IMAGE} mountpoint
+if [ ! -z "${offset_boot}" ]; then
+	mount -o loop,offset=$((offset_boot * 512)) ${SELECT_IMAGE} mountpoint/boot
+fi
 
 
 ##Execute command
+
+#hostname
+echo "hostname"
+echo -n "HOSTNAME : "
+read -r hostname
+if [ ! -z "${hostname}" ]; then
+	echo "${hostname}" > mountpoint/etc/hostname
+fi
+echo
+
+#passwd
+echo "password"
+echo -n "ROOT PASSWORD : "
+read -r root_passwd
+if [ ! -z "${root_passwd}" ]; then
+	echo ${root_passwd} | passwd root --stdin
+fi
+echo -n "PI PASSWORD : "
+read -r pi_passwd
+if [ ! -z "${pi_passwd}" ]; then
+	echo ${pi_passwd} | passwd root --stdin
+fi
+echo
 
 #wifi
 echo "wifi"
@@ -74,13 +101,20 @@ echo -n "WIFI SSID : "
 read -r wifi_ssid
 echo -n "WIFI PSK : "
 read -r wifi_psk
+echo -n "WIFI Country : "
+read -r wifi_country
 if [ ! -e mountpoint/etc/wpa_supplicant ]; then
 	mkdir -p mountpoint/etc/wpa_supplicant
 fi
 cat << EOF > mountpoint/etc/wpa_supplicant/wpa_supplicant.conf 
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+country=${wifi_country}
+
 network={
 	ssid="${wifi_ssid}"
 	psk="${wifi_psk}"
+	key_mgmt=WPA-PSK
 }
 EOF
 echo
@@ -90,7 +124,14 @@ echo "Locale"
 sed -i "s/^en_GB.UTF-8/# en_GB.UTF-8/g" mountpoint/etc/locale.gen
 sed -i "s/^# ko_KR.UTF-8/ko_KR.UTF-8/g" mountpoint/etc/locale.gen
 cmd "locale-gen"
-cmd "update-locale LANG=ko_KR.UTF-8"
+#cmd "update-locale LANG=ko_KR.UTF-8"
+cat << 'EOF' > mountpoint/etc/default/locale
+if [ -z "${TERM}" -o "${TERM}" = "linux" -o "${TERM}" = "vt220" -o "${TERM}" = "dumb" ]; then
+        LANG=C
+else
+        LANG=ko_KR.UTF-8
+fi
+EOF
 echo
 
 #timezone
@@ -98,9 +139,30 @@ echo "Timezone"
 ln -sf /usr/share/zoneinfo/Asia/Seoul mountpoint/etc/localtime
 echo
 
+#keyboard
+echo "Keyboard"
+cat << EOF > mountpoint/etc/default/keyboard
+# KEYBOARD CONFIGURATION FILE
+
+# Consult the keyboard(5) manual page.
+
+XKBMODEL="pc105"
+XKBLAYOUT="kr"
+XKBVARIANT="kr104"
+XKBOPTIONS=""
+
+BACKSPACE="guess"
+EOF
+echo
+
 #skel
 echo "skel"
 cp -ar mountpoint/etc/skel/. mountpoint/root/
+echo
+
+#Firmware
+echo "Firmware"
+cmd "apt-get install ca-certificates git-core -y && wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update && chmod +x /usr/bin/rpi-update && rpi-update"
 echo
 
 #update
@@ -115,6 +177,9 @@ echo
 
 
 ##Unmount Image
+if mountpoint mountpoint/boot ; then
+	umount mountpoint/boot
+fi
 umount mountpoint
 if mountpoint mountpoint ; then
 	echo "Unmount failed"
