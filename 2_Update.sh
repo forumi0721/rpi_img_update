@@ -45,7 +45,7 @@ SELECT_IMAGE=${img_list[$((img_no - 1))]}
 ##Mount Image
 if [ -e mountpoint ]; then
 	if mountpoint mountpoint ; then
-		umount mountpoint
+		umount -R mountpoint
 		if mountpoint mountpoint ; then
 			echo "Mount point cannot unmount"
 			exit 1
@@ -78,6 +78,8 @@ echo -n "HOSTNAME : "
 read -r hostname
 if [ ! -z "${hostname}" ]; then
 	echo "${hostname}" > mountpoint/etc/hostname
+else
+	echo "Not change"
 fi
 echo
 
@@ -87,11 +89,15 @@ echo -n "ROOT PASSWORD : "
 read -r root_passwd
 if [ ! -z "${root_passwd}" ]; then
 	echo ${root_passwd} | passwd root --stdin
+else
+	echo "Not change"
 fi
 echo -n "PI PASSWORD : "
 read -r pi_passwd
 if [ ! -z "${pi_passwd}" ]; then
 	echo ${pi_passwd} | passwd root --stdin
+else
+	echo "Not change"
 fi
 echo
 
@@ -103,10 +109,11 @@ echo -n "WIFI PSK : "
 read -r wifi_psk
 echo -n "WIFI Country : "
 read -r wifi_country
-if [ ! -e mountpoint/etc/wpa_supplicant ]; then
-	mkdir -p mountpoint/etc/wpa_supplicant
-fi
-cat << EOF > mountpoint/etc/wpa_supplicant/wpa_supplicant.conf 
+if [ ! -z "${wifi_ssid}" -a ! -z "${wifi_psk}" -a ! -z "${wifi_country}" ]; then
+	if [ ! -e mountpoint/etc/wpa_supplicant ]; then
+		mkdir -p mountpoint/etc/wpa_supplicant
+	fi
+	cat << EOF > mountpoint/etc/wpa_supplicant/wpa_supplicant.conf 
 ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
 update_config=1
 country=${wifi_country}
@@ -117,6 +124,9 @@ network={
 	key_mgmt=WPA-PSK
 }
 EOF
+else
+	echo "Not change"
+fi
 echo
 
 #locale
@@ -160,11 +170,6 @@ echo "skel"
 cp -ar mountpoint/etc/skel/. mountpoint/root/
 echo
 
-#Firmware
-echo "Firmware"
-cmd "apt-get install ca-certificates git-core -y && wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update && chmod +x /usr/bin/rpi-update && rpi-update"
-echo
-
 #update
 echo "Update"
 cmd "apt-get update -o Acquire::CompressionTypes::Order::=gz"
@@ -175,12 +180,21 @@ cmd "apt-get clean"
 cmd "find /var/lib/apt -type f -exec rm \"{}\" \\;"
 echo
 
+##Firmware
+#echo "Firmware"
+#cmd "apt-get install ca-certificates git-core -y && wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update && chmod +x /usr/bin/rpi-update && rpi-update"
+#cmd "apt-get autoremove --purge -y"
+#cmd "apt-get autoclean -y"
+#cmd "apt-get clean"
+#cmd "find /var/lib/apt -type f -exec rm \"{}\" \\;"
+#echo
+
 
 ##Unmount Image
 if mountpoint mountpoint/boot ; then
 	umount mountpoint/boot
 fi
-umount mountpoint
+umount -R mountpoint
 if mountpoint mountpoint ; then
 	echo "Unmount failed"
 else
