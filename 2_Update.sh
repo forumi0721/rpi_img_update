@@ -68,12 +68,24 @@ mount -o loop,offset=$((offset * 512)) ${SELECT_IMAGE} mountpoint
 
 ##Execute command
 
+#locale
+sed -i "s/# ko_KR.UTF-8/ko_KR.UTF-8/g" mountpint/etc/locale.gen
+cmd "locale-gen"
+
+#timezone
+ln -sf /usr/share/zoneinfo/Asia/Seoul mountpoint/etc/localtime
+
+#skel
+cp -ar mountpoint/etc/skel/. mountpoint/root/
+
+#update
 cmd "apt-get update -o Acquire::CompressionTypes::Order::=gz"
 cmd "apt-get dist-upgrade -y"
 cmd "apt-get autoremove --purge -y"
 cmd "apt-get autoclean -y"
 cmd "apt-get clean"
 cmd "find /var/lib/apt -type f -exec rm \"{}\" \\;"
+
 
 ##Unmount Image
 umount mountpoint
