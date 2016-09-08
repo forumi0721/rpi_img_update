@@ -87,8 +87,10 @@ echo
 
 #locale
 echo "Locale"
-sed -i "s/# ko_KR.UTF-8/ko_KR.UTF-8/g" mountpoint/etc/locale.gen
+sed -i "s/^en_GB.UTF-8/# en_GB.UTF-8/g" mountpoint/etc/locale.gen
+sed -i "s/^# ko_KR.UTF-8/ko_KR.UTF-8/g" mountpoint/etc/locale.gen
 cmd "locale-gen"
+cmd "update-locale LANG=ko_KR.UTF-8"
 echo
 
 #timezone
