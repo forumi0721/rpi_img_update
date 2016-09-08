@@ -68,23 +68,48 @@ mount -o loop,offset=$((offset * 512)) ${SELECT_IMAGE} mountpoint
 
 ##Execute command
 
+#wifi
+echo "wifi"
+echo -n "WIFI SSID : "
+read -r wifi_ssid
+echo -n "WIFI PSK : "
+read -r wifi_psk
+if [ ! -e mountpointd/etc/wpa_supplicant ]; then
+	mkdir -p mountpointd/etc/wpa_supplicant
+fi
+cat << EOF > mountpoint/etc/wpa_supplicant/wpa_supplicant.conf 
+network={
+	ssid="${wifi_ssid}"
+	psk="${wifi_psk}"
+}
+EOF
+echo
+
 #locale
+echo "Locale"
 sed -i "s/# ko_KR.UTF-8/ko_KR.UTF-8/g" mountpint/etc/locale.gen
 cmd "locale-gen"
+echo
 
 #timezone
+echo "Timezone"
 ln -sf /usr/share/zoneinfo/Asia/Seoul mountpoint/etc/localtime
+echo
 
 #skel
+echo "skel"
 cp -ar mountpoint/etc/skel/. mountpoint/root/
+echo
 
 #update
+echo "Update"
 cmd "apt-get update -o Acquire::CompressionTypes::Order::=gz"
 cmd "apt-get dist-upgrade -y"
 cmd "apt-get autoremove --purge -y"
 cmd "apt-get autoclean -y"
 cmd "apt-get clean"
 cmd "find /var/lib/apt -type f -exec rm \"{}\" \\;"
+echo
 
 
 ##Unmount Image
