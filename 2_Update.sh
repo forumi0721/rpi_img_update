@@ -74,8 +74,8 @@ echo -n "WIFI SSID : "
 read -r wifi_ssid
 echo -n "WIFI PSK : "
 read -r wifi_psk
-if [ ! -e mountpointd/etc/wpa_supplicant ]; then
-	mkdir -p mountpointd/etc/wpa_supplicant
+if [ ! -e mountpoint/etc/wpa_supplicant ]; then
+	mkdir -p mountpoint/etc/wpa_supplicant
 fi
 cat << EOF > mountpoint/etc/wpa_supplicant/wpa_supplicant.conf 
 network={
@@ -87,7 +87,7 @@ echo
 
 #locale
 echo "Locale"
-sed -i "s/# ko_KR.UTF-8/ko_KR.UTF-8/g" mountpint/etc/locale.gen
+sed -i "s/# ko_KR.UTF-8/ko_KR.UTF-8/g" mountpoint/etc/locale.gen
 cmd "locale-gen"
 echo
 
